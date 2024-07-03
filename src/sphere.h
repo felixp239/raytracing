@@ -5,7 +5,6 @@
 
 class sphere : public hittable {
     public:
-        sphere() : center{ vec3(0, 0, 0) }, radius{ 0 } {}
         sphere(const point3& center, double radius) : center{ center }, radius{ fmax(0, radius) } {}
 
         bool hit(const ray& r, double ray_tmin, double ray_tmax, hit_record& rec) const override {
