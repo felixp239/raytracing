@@ -1,17 +1,6 @@
 #ifndef HITTABLE_H
 #define HITTABLE_H
 
-#include "ray.h"
-
-class hittable {
-    public:
-        virtual ~hittable() = default;
-
-        virtual bool hit(const ray&r, double ray_tmin, double ray_tmax, hitrecord& rec) const = 0;
-
-        virtual vec3 normal(const point3& p) const = 0;
-};
-
 class hit_record {
     public:
         point3 p;
@@ -26,6 +15,13 @@ class hit_record {
             front_face = dot(r.direction(), outward_normal) < 0;
             normal = front_face ? outward_normal : -outward_normal;
         }
+};
+
+class hittable {
+    public:
+        virtual ~hittable() = default;
+
+        virtual bool hit(const ray&r, double ray_tmin, double ray_tmax, hit_record& rec) const = 0;
 };
 
 #endif

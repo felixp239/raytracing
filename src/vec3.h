@@ -1,11 +1,6 @@
 #ifndef VEC3_H  
 #define VEC3_H
 
-#include <cmath>
-#include <iostream>
-
-using std::sqrt;
-
 class vec3 {
     public:
         double e[3];
@@ -56,7 +51,7 @@ using point3 = vec3;
 // Vector Utility Functions
 
 inline std::ostream& operator<<(std::ostream& out, const vec3& v) {
-    return out << v.e[0] << ' ' << v.e[1] << ' ' << v.e[2];
+    return out << v[0] << ' ' << v[1] << ' ' << v[2];
 }
 
 inline vec3 operator+(const vec3& u, const vec3 v) {
