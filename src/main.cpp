@@ -6,7 +6,7 @@
 
 color ray_color(const ray& r, const hittable& world) {
     hit_record rec;
-    if (world.hit(r, 0, infinity, rec)) {
+    if (world.hit(r, interval(0, infinity), rec)) {
         return 0.5 * (rec.normal + color(1.0, 1.0, 1.0));
     }
 
@@ -76,7 +76,7 @@ int main() {
         return 1;
     }
     
-    int p = 1;
+    int next_percentage = 1;
     int image_size = image_height * image_width;
 
     for (int y = 0; y < image_height; y++) {
@@ -88,17 +88,23 @@ int main() {
             color pixel_color = ray_color(r, world);
             write_color(output_file, pixel_color);
 
-            if (p * image_size < 100 * (y * image_width + x + 1)) {
-                if (p < 10) {
-                    std::clog << " ";
+            int current_percentage = (y * image_width + x + 1) * 100 / image_size;
+            if (current_percentage >= next_percentage) {
+                if (current_percentage < 10) {
+                    std::clog << ' ';
                 }
-                std::clog << " " << p << "% done\n" << std::flush;
-                p += 1;
+                if (current_percentage < 100) {
+                    std::clog << ' ';
+                }
+                std::clog << current_percentage << "% done\n" << std::flush;
+                next_percentage = current_percentage + 1;
             }
         }
     }
 
-    std::clog << p << "% done\n";
+    if (next_percentage <= 100) {
+        std::clog << "100% done\n";
+    }
 
     output_file.close();
 
