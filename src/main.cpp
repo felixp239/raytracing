@@ -1,12 +1,46 @@
 #include "vec3.h"
+#include "ray.h"
 #include "color.h"
 
 #include <iostream>
 #include <fstream>
 
+color ray_color(const ray& r) {
+    return color{ 0, 0, 0 };
+}
+
 int main() {
-    int image_width     = 256;
-    int image_height    = 256;
+    double aspect_ratio = 16.0 / 9.0;
+
+    int image_width;
+
+    std::cout << "Give an image width: ";
+    std::cin >> image_width;
+
+    // Calculate the image height, and ensure that it's at least 1.
+    int image_height    = int(image_width / aspect_ratio);
+    image_height        = (image_height < 1) ? 1 : image_height;
+
+    // Camera 
+
+    double focal_length     = 1.0; 
+    double viewport_height  = 2.0;
+    double viewport_width   = viewport_height * image_width / image_height;
+    point3 camera_center    = point3{ 0, 0, 0 };
+
+    // Calculate the vectors across the horizontal and down the vertical viewport edges.
+    vec3 viewport_u = vec3(viewport_width, 0, 0);
+    vec3 viewport_v = vec3(0, -viewport_height, 0);
+
+    // Calculate the horizontal and vertical delta vectors from pixel to pixel.
+    vec3 pixel_delta_u = viewport_u / image_width;
+    vec3 pixel_delta_v = viewport_v / image_height;
+
+    // Calculate the location of the upper left pixel.
+    point3 viewport_upper_left = camera_center
+                             + vec3(0, 0, focal_length)
+                             - 0.5 * (viewport_u + viewport_v);
+    point3 start_pixel         = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
     std::ofstream   output_file;
     std::string     output_filename;
@@ -33,9 +67,13 @@ int main() {
 
     for (int y = 0; y < image_height; y++) {
         for (int x = 0; x < image_width; x++) {
-            color pixel_color = color(double(x) / (image_width - 1), double(y) / (image_height - 1), 0);
+            point3 current_pixel = start_pixel + x * pixel_delta_u + y * pixel_delta_v;
+            vec3   ray_direction = current_pixel - camera_center;
+            ray r(camera_center, ray_direction);
+
+            color pixel_color = ray_color(r);
             write_color(output_file, pixel_color);
-            
+
             if (p * image_size < 100 * (y * image_width + x + 1)) {
                 if (p < 10) {
                     std::clog << " ";
