@@ -5,18 +5,28 @@
 #include <iostream>
 #include <fstream>
 
-bool hit_sphere(const point3& center, double radius, const ray& r) {
+double hit_sphere(const point3& center, double radius, const ray& r) {
     vec3 oc = center - r.origin();
     double a = r.direction().length_squared();
-    double b = -2.0 * dot(r.direction(), oc);
+    double h = dot(r.direction(), oc);
     double c = oc.length_squared() - radius * radius;
-    double discriminant = b * b - 4 * a * c;
-    return (discriminant >= 0);
+    double discriminant = h * h - a * c;
+    
+    if (discriminant < 0) {
+        return -1.0;
+    }
+    else {
+        return (h - sqrt(discriminant)) / a;
+    }
 }
 
 color ray_color(const ray& r) {
-    if (hit_sphere(vec3(0, 0, -2), 0.5, r)) {
-        return color(1.0, 0.0, 0.0);
+    vec3 sphere_center = vec3(0, 0, -2);
+    double radius = 0.75;
+    double t = hit_sphere(sphere_center, radius, r);
+    if (t > 0.0) {
+        vec3 N = (r.at(t) - sphere_center) / radius;
+        return 0.5 * color(N.x() + 1, N.y() + 1, N.z() + 1);
     }
 
     vec3 unit_direction = unit_vector(r.direction());
