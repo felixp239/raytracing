@@ -33,15 +33,8 @@ int main() {
 
     for (int y = 0; y < image_height; y++) {
         for (int x = 0; x < image_width; x++) {
-            auto r = x * 255.999 / (image_width - 1);
-            auto g = y * 255.999 /  (image_height - 1);
-            auto b = 0.0;
-
-            int ir = int(r);
-            int ig = int(g);
-            int ib = int(b);
-
-            output_file << ir << ' ' << ig << ' ' << ib << '\n';
+            color pixel_color = color(double(x) / (image_width - 1), double(y) / (image_height - 1), 0);
+            write_color(output_file, pixel_color);
             
             if (p * image_size < 100 * (y * image_width + x + 1)) {
                 if (p < 10) {
