@@ -5,8 +5,24 @@
 #include <iostream>
 #include <fstream>
 
+bool hit_sphere(const point3& center, double radius, const ray& r) {
+    vec3 oc = center - r.origin();
+    double a = r.direction().length_squared();
+    double b = -2.0 * dot(r.direction(), oc);
+    double c = oc.length_squared() - radius * radius;
+    double discriminant = b * b - 4 * a * c;
+    return (discriminant >= 0);
+}
+
 color ray_color(const ray& r) {
-    return color{ 0, 0, 0 };
+    if (hit_sphere(vec3(0, 0, -2), 0.5, r)) {
+        return color(1.0, 0.0, 0.0);
+    }
+
+    vec3 unit_direction = unit_vector(r.direction());
+    vec3 gradient_direction = unit_vector(vec3(0, 1, 0));
+    double a = 0.5 * (dot(unit_direction, gradient_direction) + 1.0);
+    return (1 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
 }
 
 int main() {
@@ -38,7 +54,7 @@ int main() {
 
     // Calculate the location of the upper left pixel.
     point3 viewport_upper_left = camera_center
-                             + vec3(0, 0, focal_length)
+                             - vec3(0, 0, focal_length)
                              - 0.5 * (viewport_u + viewport_v);
     point3 start_pixel         = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
