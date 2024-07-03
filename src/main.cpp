@@ -15,7 +15,7 @@ int main() {
         output_file.open(output_filename);
     }
     
-    std::cout << "Process start\n";
+    std::clog << "Process start\n";
 
     output_file << "P3" << '\n';
     output_file << image_width << ' ' << image_height << '\n';
@@ -42,19 +42,19 @@ int main() {
             
             if (p * image_size < 100 * (y * image_width + x + 1)) {
                 if (p < 10) {
-                    std::cout << " ";
+                    std::clog << " ";
                 }
-                std::cout << " " << p << "% done\n";
+                std::clog << " " << p << "% done\n" << std::flush;
                 p += 1;
             }
         }
     }
 
-    std::cout << p << "% done\n";
+    std::clog << p << "% done\n";
 
     output_file.close();
 
-    std::cout << "Your file is done!\n";
+    std::clog << "Your file is done!\n" << std::flush;
 
     return 0;
 }
