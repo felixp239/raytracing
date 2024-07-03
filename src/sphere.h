@@ -32,13 +32,10 @@ class sphere : public hittable {
 
             rec.t = root;
             rec.p = r.at(rec.t);
-            rec.object = *this;
+            vec3 outward_normal = (rec.p - center) / radius;
+            rec.set_face_normal(r, outward_normal);
 
             return true;
-        }
-
-        vec3 normal(const point3& p) const override {
-            return (p - center) / radius;
         }
 
     private:
