@@ -2,7 +2,7 @@
 #define CAMERA_H
 
 void write_progress_bar(int current_percentage) {
-    int barWidth = 100;
+    int barWidth = 50;
 
     if (current_percentage >= 100) {
         std::clog << "[";
