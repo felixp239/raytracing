@@ -19,14 +19,21 @@ int main() {
     camera cam;
 
     double aspect_ratio = 16.0 / 9.0;
+    cam.aspect_ratio    = aspect_ratio;
 
     int image_width;
 
     std::cout << "Give an image width: ";
     std::cin >> image_width;
 
-    cam.aspect_ratio = aspect_ratio;
-    cam.image_width  = image_width;
+    cam.image_width = image_width;
+
+    int samples_per_pixel;
+
+    std::cout << "Give an amount of samples per pixel: ";
+    std::cin >> samples_per_pixel;
+
+    cam.samples_per_pixel = samples_per_pixel;
     
     cam.render(world);
     
