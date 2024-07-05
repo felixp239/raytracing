@@ -3,6 +3,9 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "hittable.h"
+#include "material.h"
+
 void write_progress_bar(int current_percentage) {
     int barWidth = 50;
 
@@ -102,7 +105,6 @@ class camera {
 
                     static const interval intensity{ 0, 0.999 };
 
-                    // We apply sqrt to pixels_color because that way we trans
                     sample_buffer[4 * (j * image_width + i) + 0] += int(256 * intensity.clamp(linear_to_gamma(pixel_color.x())));
                     sample_buffer[4 * (j * image_width + i) + 1] += int(256 * intensity.clamp(linear_to_gamma(pixel_color.y())));
                     sample_buffer[4 * (j * image_width + i) + 2] += int(256 * intensity.clamp(linear_to_gamma(pixel_color.z())));
@@ -111,7 +113,7 @@ class camera {
             }
         }
 
-        // Gamma correction (whatever the hell that means)
+        // Gamma correction from linear space to gamma 2 (whatever the hell that means)
         inline double linear_to_gamma(double linear_component)
         {
             if (linear_component > 0)
@@ -192,19 +194,26 @@ class camera {
 
             hit_record rec;
             if (world.hit(r, interval(0.001, infinity), rec)) {
-                vec3 direction = rec.normal + random_unit_vector(); // !!!This is NOT normalized!!!
-                return 0.5 * ray_color(ray(rec.p, direction), depth - 1, world);
+                ray scattered;
+                color attenuation;
+                if (rec.mat->scatter(r, rec, attenuation, scattered)) {
+                    return attenuation * ray_color(scattered, depth - 1, world);
+                }
+                return color(0, 0, 0);
             }
 
             vec3 unit_direction = unit_vector(r.direction());
-            /*if (unit_direction[0] > 0 && unit_direction[1] > 0.5 && unit_direction[2] < 0 && unit_direction[0] < 0.5 && unit_direction[2] > -0.7) {
-                return color(1.0, 1.0, 1.0);
-            }*/
-            vec3 gradient_direction = unit_vector(vec3(0, 1, 0));
-            double a = 0.5 * (dot(unit_direction, gradient_direction) + 1.0);
-            return (1 - a) * color(1.0, 1.0, 1.0) + a * color(1.0, 0.07, 0.57);
+            static vec3     gradient_direction  = unit_vector(vec3(1, 3, 0));
+            static color    color_start         = color{ 1.0, 1.0, 1.0 };
+            static color    color_finish        = color{ 0.5, 1.0, 0.7 };
+            return skybox_gradient(unit_direction, gradient_direction, color_start, color_finish);
         }
 
+        color skybox_gradient(const vec3& unit_direction, const vec3& gradient_direction,
+                              const color& color_start, const color& color_finish) const {
+            double a = 0.5 * (dot(unit_direction, gradient_direction) + 1.0);
+            return (1 - a) * color_start + a * color_finish;
+        }
 };
 
 #endif

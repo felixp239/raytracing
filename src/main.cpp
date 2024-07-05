@@ -1,18 +1,24 @@
 #include "common.h"
 
+#include "camera.h"
 #include "hittable.h"
 #include "hittable_list.h"
+#include "material.h"
 #include "sphere.h"
-#include "camera.h"
 
 
 int main() {
     hittable_list world;
 
-    world.add(make_shared<sphere>(point3(0, 0, -1), 0.5));
-    world.add(make_shared<sphere>(point3(-0.8, 0, -1.3), 0.2));
-    world.add(make_shared<sphere>(point3(1.3, 0.2, -1), 0.6));
-    world.add(make_shared<sphere>(point3(0, -100.5, -1), 100));
+    shared_ptr<material> material_ground = make_shared<lambertian>(color(0.8, 0.8, 0.0));
+    shared_ptr<material> material_center = make_shared<lambertian>(color(0.1, 0.2, 0.5));
+    shared_ptr<material> material_left   = make_shared<metal>(color(0.8, 0.8, 0.8));
+    shared_ptr<material> material_right  = make_shared<metal>(color(0.8, 0.6, 0.2));
+
+    world.add(make_shared<sphere>(point3(0.0, -100.5, -1.0), 100.0, material_ground));
+    world.add(make_shared<sphere>(point3(0.0, 0.0, -1.2), 0.5, material_center));
+    world.add(make_shared<sphere>(point3(-1.0, 0.0, -1.0), 0.5, material_left));
+    world.add(make_shared<sphere>(point3(1.0, 0.0, -1.0), 0.5, material_right));
 
     camera cam;
 
@@ -31,7 +37,7 @@ int main() {
     //std::cout << "Give an amount of samples per pixel: ";
     //std::cin >> samples_per_pixel;
 
-    cam.max_depth = 50;
+    cam.max_depth = 100;
 
     cam.samples_per_pixel = 1;
     
