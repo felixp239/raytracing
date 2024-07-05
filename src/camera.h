@@ -36,6 +36,7 @@ class camera {
         double aspect_ratio      = 1.0;
         int    image_width       = 100;
         int    samples_per_pixel = 10;
+        int    max_depth         = 10;
         
         void render(const hittable& world) {
             std::ofstream   output_file;
@@ -43,9 +44,9 @@ class camera {
 
             initialize();
 
-            sf::RenderWindow window(sf::VideoMode(image_width, image_height), "Raytracer");
+            sf::RenderWindow window(sf::VideoMode(1440, 810), "Raytracer");
 
-            sf::Uint16* sample_buffer = new sf::Uint16[image_width * image_height * 4];
+            sf::Uint32* sample_buffer = new sf::Uint32[image_width * image_height * 4];
 
             clearSampleBuffer(sample_buffer);
 
@@ -56,6 +57,8 @@ class camera {
             sf::Texture texture;
             texture.create(image_width, image_height);
             sf::Sprite sprite(texture);
+            
+            sprite.setScale(1440.0 / image_width, 1440.0 / image_width);
           
             texture.update(pixels);
 
@@ -90,28 +93,33 @@ class camera {
         vec3   pixel_delta_u;
         vec3   pixel_delta_v;
 
-        void updateSampleBuffer(const hittable& world, sf::Uint16* sample_buffer)
+        void updateSampleBuffer(const hittable& world, sf::Uint32* sample_buffer)
         {
             for (int j = 0; j < image_height; j++) {
                 for (int i = 0; i < image_width; i++) {
                     ray r = get_ray(i, j);
-                    color pixel_color = ray_color(r, world);
+                    color pixel_color = ray_color(r, max_depth, world);
 
-                    // Translate the [0,1] component values to the byte range [0,255].
                     static const interval intensity{ 0, 0.999 };
-                    int rbyte = int(256 * intensity.clamp(pixel_color.x()));
-                    int gbyte = int(256 * intensity.clamp(pixel_color.y()));
-                    int bbyte = int(256 * intensity.clamp(pixel_color.z()));
 
-                    sample_buffer[4 * (j * image_width + i) + 0] += rbyte;
-                    sample_buffer[4 * (j * image_width + i) + 1] += gbyte;
-                    sample_buffer[4 * (j * image_width + i) + 2] += bbyte;
+                    // We apply sqrt to pixels_color because that way we trans
+                    sample_buffer[4 * (j * image_width + i) + 0] += int(256 * intensity.clamp(linear_to_gamma(pixel_color.x())));
+                    sample_buffer[4 * (j * image_width + i) + 1] += int(256 * intensity.clamp(linear_to_gamma(pixel_color.y())));
+                    sample_buffer[4 * (j * image_width + i) + 2] += int(256 * intensity.clamp(linear_to_gamma(pixel_color.z())));
                     sample_buffer[4 * (j * image_width + i) + 3] += 255;
                 }
             }
         }
 
-        void clearSampleBuffer(sf::Uint16* sample_buffer) {
+        // Gamma correction (whatever the hell that means)
+        inline double linear_to_gamma(double linear_component)
+        {
+            if (linear_component > 0)
+                return sqrt(linear_component);
+            return 0;
+        }
+
+        void clearSampleBuffer(sf::Uint32* sample_buffer) {
             for (int j = 0; j < image_height; j++) {
                 for (int i = 0; i < image_width; i++) {
                     sample_buffer[4 * (j * image_width + i) + 0] = 0;
@@ -122,7 +130,7 @@ class camera {
             }
         }
 
-        void updatePixels(sf::Uint8* pixels, const sf::Uint16* sample_buffer, int current_samples) {
+        void updatePixels(sf::Uint8* pixels, const sf::Uint32* sample_buffer, int current_samples) {
             for (int i = 0; i < 4 * image_width * image_height; i++) {
                 pixels[i] = sample_buffer[i] / current_samples;
             }
@@ -169,7 +177,7 @@ class camera {
             point3 ray_origin    = camera_center;
             vec3   ray_direction = pixel_sample - ray_origin;
 
-            return ray(ray_origin, ray_direction);
+            return ray(ray_origin, ray_direction); // !!!ray_direction is NOT normalized!!!
         }
 
         vec3 sample_square() const {
@@ -177,17 +185,24 @@ class camera {
             return vec3(random_double(-0.5, 0.5), random_double(-0.5, 0.5), 0);
         }
 
-        color ray_color(const ray& r, const hittable& world) const {
+        color ray_color(const ray& r, int depth, const hittable& world) const {
+            if (depth <= 0) {
+                return color(0, 0, 0);
+            }
+
             hit_record rec;
-            if (world.hit(r, interval(0, infinity), rec)) {
-                vec3 direction = random_on_hemisphere(rec.normal);
-                return 0.5 * ray_color(ray(rec.p, direction), world);
+            if (world.hit(r, interval(0.001, infinity), rec)) {
+                vec3 direction = rec.normal + random_unit_vector(); // !!!This is NOT normalized!!!
+                return 0.5 * ray_color(ray(rec.p, direction), depth - 1, world);
             }
 
             vec3 unit_direction = unit_vector(r.direction());
+            /*if (unit_direction[0] > 0 && unit_direction[1] > 0.5 && unit_direction[2] < 0 && unit_direction[0] < 0.5 && unit_direction[2] > -0.7) {
+                return color(1.0, 1.0, 1.0);
+            }*/
             vec3 gradient_direction = unit_vector(vec3(0, 1, 0));
             double a = 0.5 * (dot(unit_direction, gradient_direction) + 1.0);
-            return (1 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
+            return (1 - a) * color(1.0, 1.0, 1.0) + a * color(1.0, 0.07, 0.57);
         }
 
 };

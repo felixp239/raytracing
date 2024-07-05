@@ -10,6 +10,8 @@ int main() {
     hittable_list world;
 
     world.add(make_shared<sphere>(point3(0, 0, -1), 0.5));
+    world.add(make_shared<sphere>(point3(-0.8, 0, -1.3), 0.2));
+    world.add(make_shared<sphere>(point3(1.3, 0.2, -1), 0.6));
     world.add(make_shared<sphere>(point3(0, -100.5, -1), 100));
 
     camera cam;
@@ -26,10 +28,12 @@ int main() {
 
     int samples_per_pixel;
 
-    std::cout << "Give an amount of samples per pixel: ";
-    std::cin >> samples_per_pixel;
+    //std::cout << "Give an amount of samples per pixel: ";
+    //std::cin >> samples_per_pixel;
 
-    cam.samples_per_pixel = samples_per_pixel;
+    cam.max_depth = 50;
+
+    cam.samples_per_pixel = 1;
     
     cam.render(world);
     
