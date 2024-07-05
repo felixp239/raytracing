@@ -1,6 +1,8 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#include <SFML/Graphics.hpp>
+
 void write_progress_bar(int current_percentage) {
     int barWidth = 50;
 
@@ -39,53 +41,45 @@ class camera {
             std::ofstream   output_file;
             std::string     output_filename;
 
-            while (!output_file.is_open()) {
-                std::cout << "Give an output filename: ";
-                std::cin >> output_filename;
-                output_filename = "../results/" + output_filename + ".ppm";
-                output_file.open(output_filename);
-            }
-
             initialize();
 
-            std::clog << "Rendering start\n";
+            sf::RenderWindow window(sf::VideoMode(image_width, image_height), "Raytracer");
 
-            output_file << "P3" << '\n';
-            output_file << image_width << ' ' << image_height << '\n';
-            output_file << 255 << '\n';
+            sf::Uint16* sample_buffer = new sf::Uint16[image_width * image_height * 4];
 
-            if ((image_height <= 0) || (image_width <= 0)) {
-                return;
-            }
-            
-            int current_percentage = 0;
-            int next_percentage    = 1;
-            int image_size         = image_height * image_width;
+            clearSampleBuffer(sample_buffer);
 
-            for (int j = 0; j < image_height; j++) {
-                for (int i = 0; i < image_width; i++) {
-                    color pixel_color{ 0, 0, 0 };
-                    for (int sample = 0; sample < samples_per_pixel; sample++) {
-                        ray r = get_ray(i, j);
-                        pixel_color += ray_color(r, world);
-                    }
-                    write_color(output_file, pixels_samples_scale * pixel_color);
+            int current_samples = 0;
 
-                    current_percentage = (j * image_width + i + 1) * 100 / image_size;
-                    if (current_percentage >= next_percentage) {
-                        write_progress_bar(current_percentage);
-                        next_percentage = current_percentage + 1;
-                    }
+            sf::Uint8* pixels = new sf::Uint8[image_width * image_height * 4];
+
+            sf::Texture texture;
+            texture.create(image_width, image_height);
+            sf::Sprite sprite(texture);
+          
+            texture.update(pixels);
+
+            while (window.isOpen())
+            {
+                sf::Event event;
+                while (window.pollEvent(event))
+                {
+                    if (event.type == sf::Event::Closed)
+                        window.close();
                 }
+
+                updateSampleBuffer(world, sample_buffer);
+
+                current_samples += 1;
+
+                updatePixels(pixels, sample_buffer, current_samples);
+
+                texture.update(pixels);
+
+                window.clear();
+                window.draw(sprite);
+                window.display();
             }
-
-            if (next_percentage <= 100) {
-                write_progress_bar(current_percentage);
-            }
-
-            output_file.close();
-
-            std::clog << "Rendering done\n" << std::flush;
         }
 
     private:
@@ -95,6 +89,44 @@ class camera {
         point3 start_pixel;
         vec3   pixel_delta_u;
         vec3   pixel_delta_v;
+
+        void updateSampleBuffer(const hittable& world, sf::Uint16* sample_buffer)
+        {
+            for (int j = 0; j < image_height; j++) {
+                for (int i = 0; i < image_width; i++) {
+                    ray r = get_ray(i, j);
+                    color pixel_color = ray_color(r, world);
+
+                    // Translate the [0,1] component values to the byte range [0,255].
+                    static const interval intensity{ 0, 0.999 };
+                    int rbyte = int(256 * intensity.clamp(pixel_color.x()));
+                    int gbyte = int(256 * intensity.clamp(pixel_color.y()));
+                    int bbyte = int(256 * intensity.clamp(pixel_color.z()));
+
+                    sample_buffer[4 * (j * image_width + i) + 0] += rbyte;
+                    sample_buffer[4 * (j * image_width + i) + 1] += gbyte;
+                    sample_buffer[4 * (j * image_width + i) + 2] += bbyte;
+                    sample_buffer[4 * (j * image_width + i) + 3] += 255;
+                }
+            }
+        }
+
+        void clearSampleBuffer(sf::Uint16* sample_buffer) {
+            for (int j = 0; j < image_height; j++) {
+                for (int i = 0; i < image_width; i++) {
+                    sample_buffer[4 * (j * image_width + i) + 0] = 0;
+                    sample_buffer[4 * (j * image_width + i) + 1] = 0;
+                    sample_buffer[4 * (j * image_width + i) + 2] = 0;
+                    sample_buffer[4 * (j * image_width + i) + 3] = 0;
+                }
+            }
+        }
+
+        void updatePixels(sf::Uint8* pixels, const sf::Uint16* sample_buffer, int current_samples) {
+            for (int i = 0; i < 4 * image_width * image_height; i++) {
+                pixels[i] = sample_buffer[i] / current_samples;
+            }
+        }
 
         void initialize() {
             // Calculate the image height, and ensure that it's at least 1.
@@ -148,7 +180,8 @@ class camera {
         color ray_color(const ray& r, const hittable& world) const {
             hit_record rec;
             if (world.hit(r, interval(0, infinity), rec)) {
-                return 0.5 * (rec.normal + color(1.0, 1.0, 1.0));
+                vec3 direction = random_on_hemisphere(rec.normal);
+                return 0.5 * ray_color(ray(rec.p, direction), world);
             }
 
             vec3 unit_direction = unit_vector(r.direction());
