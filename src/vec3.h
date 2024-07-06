@@ -107,6 +107,15 @@ inline vec3 unit_vector(const vec3& v) {
     return v / v.length();
 }
 
+inline vec3 random_in_unit_disk() {
+    while (true) {
+        vec3 p = vec3(random_double(-1.0, 1.0), random_double(-1.0, 1.0), 0);
+        if (p.length_squared() <= 1) {
+            return unit_vector(p);
+        }
+    }
+}
+
 inline vec3 random_in_unit_sphere() {
     while (true) {
         vec3 p = vec3::random(-1, 1);
