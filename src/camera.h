@@ -42,6 +42,9 @@ class camera {
         int    max_depth         = 10;
         
         double vfov              = 90; 
+        point3 lookfrom = point3(0, 0, 0);   // Point camera is looking from
+        point3 lookat = point3(0, 0, -1);  // Point camera is looking at
+        vec3   vup = vec3(0, 1, 0);     // Camera-relative "up" direction
 
         void render(const hittable& world) {
             std::ofstream   output_file;
@@ -97,6 +100,7 @@ class camera {
         point3 start_pixel;
         vec3   pixel_delta_u;
         vec3   pixel_delta_v;
+        vec3   u, v, w;              // Camera frame basis vectors
 
         void updateSampleBuffer(const hittable& world, sf::Uint32* sample_buffer)
         {
@@ -148,14 +152,20 @@ class camera {
             pixels_samples_scale = 1.0 / samples_per_pixel;
 
             // Camera 
-            double focal_length     = 1.0; 
-            double viewport_height  = 2.0;
+            double focal_length     = (lookat - lookfrom).length();
+            double theta            = degrees_to_radians(vfov);
+            double h                = tan(theta / 2);
+            double viewport_height  = 2 * h * focal_length;
             double viewport_width   = viewport_height * image_width / image_height;
-            camera_center           = point3{ 0, 0, 0 };
+            camera_center           = lookfrom;
+
+            w = -(lookat - lookfrom) / focal_length;
+            u = unit_vector(cross(vup, w));
+            v = cross(w, u);
 
             // Calculate the vectors across the horizontal and down the vertical viewport edges.
-            vec3 viewport_u = vec3(viewport_width, 0, 0);
-            vec3 viewport_v = vec3(0, -viewport_height, 0);
+            vec3 viewport_u = viewport_width * u;
+            vec3 viewport_v = viewport_height * -v;
 
             // Calculate the horizontal and vertical delta vectors from pixel to pixel.
             pixel_delta_u   = viewport_u / image_width;
@@ -163,7 +173,7 @@ class camera {
 
             // Calculate the location of the upper left pixel.
             point3 viewport_upper_left = camera_center
-                                    - vec3(0, 0, focal_length)
+                                    - focal_length * w
                                     - 0.5 * (viewport_u + viewport_v);
             start_pixel                = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
