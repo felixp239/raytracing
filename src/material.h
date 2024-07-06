@@ -41,18 +41,61 @@ class lambertian : public material {
 
 class metal : public material {
 	public:
-		metal(const color& albedo) : albedo{ albedo } {}
+		metal(const color& albedo, double fuzz) : albedo{ albedo }, fuzz{ (fuzz < 1) ? fuzz : 1 } {}
 
 		bool scatter(
 			const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
 		) const override {
-			vec3 scatter_direction = reflect(r_in.direction(), rec.normal);
-			scattered = ray(rec.p, scatter_direction);
+			vec3 reflection_direction = reflect(r_in.direction(), rec.normal);
+			reflection_direction = unit_vector(reflection_direction) + fuzz * random_unit_vector();
+			scattered = ray(rec.p, reflection_direction);
 			attenuation = albedo;
-			return true;
+			return (dot(reflection_direction, rec.normal) > 0);
 		}
 	private:
 		color albedo;
+		double fuzz;
+};
+
+class dielectric : public material {
+	public:
+		dielectric(double refraction_index) : refraction_index{ refraction_index } {}
+
+		virtual bool scatter(
+			const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
+		) const override {
+			attenuation = color(1.0, 1.0, 1.0);
+			double ri = rec.front_face ? (1.0 / refraction_index) : refraction_index;
+
+			vec3 unit_direction = unit_vector(r_in.direction());
+			
+			double cos_theta = dot(-unit_direction, rec.normal);
+			double sin_theta = sqrt(fabs(1 - cos_theta * cos_theta));
+	
+			bool cannot_refract = (sin_theta * ri > 1);
+			vec3 refracted_direction;
+
+			if (cannot_refract || reflectance(cos_theta, ri) > random_double()) {  // Can refract
+				refracted_direction = reflect(unit_direction, rec.normal);
+			}
+			else {
+				refracted_direction = refract(unit_direction, rec.normal, ri);
+			}
+
+			scattered = ray(rec.p, refracted_direction);
+			return true;
+		}
+	private:
+		// Refractive index in vacuum or air, or the ratio of the material's refractive index over
+		// the refractive index of the enclosing media
+		double refraction_index;
+
+		static double reflectance(double cosine, double refraction_index) {
+			// Use Schlick's approximation for reflectance.
+			auto r0 = (1 - refraction_index) / (1 + refraction_index);
+			r0 = r0 * r0;
+			return r0 + (1 - r0) * pow((1 - cosine), 5);
+		}
 };
 
 #endif
